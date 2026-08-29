@@ -1,4 +1,4 @@
-[![Screenshot](https://i.ibb.co/svm5fhH7/Screenshot-From-2026-08-29-12-20-07.png)](https://koshinls.liveplayer.dev)
+[![Screenshot](https://i.ibb.co/svm5fhH7/Screenshot-From-2026-08-29-12-20-07.png)](https://koshinls.localplayer.dev)
 
 # The KLS Website
 
@@ -6,7 +6,7 @@ This is the source code for my website.
 
 (click or click the image.)
 
-[https://koshinls.liveplayer.dev](https://koshinlsliveplayer.dev)
+[https://koshinls.localplayer.dev](https://koshinls.localplayer.dev)
 
 - [ ] Hi!
 
