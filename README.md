@@ -6,7 +6,7 @@ This is the source code for my website.
 
 (click or click the image.)
 
-[https://liveplayer.dev](https://koshinlsliveplayer.dev)
+[https://koshinls.liveplayer.dev](https://koshinlsliveplayer.dev)
 
 - [ ] Hi!
 
