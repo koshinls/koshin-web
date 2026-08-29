@@ -1,23 +1,25 @@
-# KoshinLS Personal Website
+[![Screenshot](https://i.ibb.co/svm5fhH7/Screenshot-From-2026-08-29-12-20-07.png)](https://liveplayer.dev)
 
-The new experimental personal-site design for KoshinLS.
+# The KLS Website
 
-## Current domain
+This is the source code for my website.
 
-`koshinls.liveplayer.dev`
+(click or click the image.)
 
-## Structure planned
+[https://liveplayer.dev](https://liveplayer.dev)
 
-- **koshinls** — About Me / personal side
-- **liveplayer** — games, Minecraft, and other game-related things
-- **dev** — projects and links
-
-For now these areas are presented on the landing page. They can be split into separate pages later.
+- [ ] Hi!
 
 ## Login
 
-GitHub, Google, Naver, Microsoft, and guest buttons are currently UI placeholders only. No credentials are collected or stored.
+GitHub, Google, Naver, Microsoft/Minecraft login available.
 
-## GitHub Pages
+## Info
 
-The site is plain HTML/CSS/JS and can be hosted directly with GitHub Pages.
+|               |   Modrinth            |    CurseForge           |        GitHub       |
+|---------------|---------------|---------------|---------------|
+|        KLS Workshop       |      [https://modrinth.com/mod/kls-workshop](https://modrinth.com/mod/kls-workshop)         |   [https://www.curseforge.com/minecraft/mc-mods/kls-workshop](https://www.curseforge.com/minecraft/mc-mods/kls-workshop)             |     [https://github.com/koshinls/klsworkshop](https://github.com/koshinls/klsworkshop)         |
+|         *      |        *       |        *       |         *      |
+
+
+
