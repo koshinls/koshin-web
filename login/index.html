@@ -1,43 +1,187 @@
 <!doctype html>
 <html lang="en">
+
 <head>
+
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1"
+  >
+
+  <meta
+          name="description"
+          content="KoshinLS account sign in."
+  >
+
   <title>KoshinLS — Sign in</title>
-  <link rel="stylesheet" href="style.css">
+
+  <link
+          rel="stylesheet"
+          href="style.css"
+  >
+
 </head>
+
+
 <body>
-  <main class="shell">
-    <section class="card" id="login">
-      <a class="brand" href="../">KoshinLS<span>.</span></a>
-      <p class="eyebrow">ACCOUNT</p>
-      <h1>Welcome back.</h1>
-      <p class="sub">Sign in to your Koshin account.</p>
 
-      <div class="providers">
-        <button class="provider" data-provider="GitHub">GitHub</button>
-        <button class="provider" data-provider="Google">Google</button>
-        <button class="provider" data-provider="Naver">Naver</button>
-        <button class="provider" data-provider="Microsoft">Microsoft</button>
-      </div>
+<main class="shell">
 
-      <div class="divider"><span>or</span></div>
-      <button class="guest" id="guest">Continue as guest</button>
-      <p class="note">Supabase configuration is centralized in config.js.</p>
-    </section>
 
-    <section class="card hidden" id="message">
-      <a class="brand" href="../">KoshinLS<span>.</span></a>
-      <div class="check">✓</div>
-      <p class="eyebrow" id="label">LOGIN</p>
-      <h1 id="title">Ready.</h1>
-      <p class="sub" id="text"></p>
-      <button class="guest" id="back">Back to sign in</button>
-    </section>
-  </main>
+  <!-- LOGIN -->
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js"></script>
-  <script src="script.js"></script>
+  <section
+          class="card"
+          id="login"
+  >
+
+    <a
+            class="brand"
+            href="../"
+    >
+      KoshinLS<span>.</span>
+    </a>
+
+
+    <p class="eyebrow">
+      ACCOUNT
+    </p>
+
+
+    <h1>
+      Welcome back.
+    </h1>
+
+
+    <p class="sub">
+      Sign in to your Koshin account.
+    </p>
+
+
+    <div class="providers">
+
+      <button
+              class="provider"
+              type="button"
+              data-provider="GitHub"
+      >
+        GitHub
+      </button>
+
+
+      <button
+              class="provider"
+              type="button"
+              data-provider="Google"
+      >
+        Google
+      </button>
+
+
+      <button
+              class="provider"
+              type="button"
+              data-provider="Naver"
+      >
+        Naver
+      </button>
+
+
+      <button
+              class="provider"
+              type="button"
+              data-provider="Microsoft"
+      >
+        Microsoft
+      </button>
+
+    </div>
+
+
+    <div class="divider">
+      <span>or</span>
+    </div>
+
+
+    <button
+            class="guest"
+            id="guest"
+            type="button"
+    >
+      Continue as guest
+    </button>
+
+
+    <p class="note">
+      Supabase configuration is centralized in config.js.
+    </p>
+
+  </section>
+
+
+  <!-- MESSAGE -->
+
+  <section
+          class="card hidden"
+          id="message"
+  >
+
+    <a
+            class="brand"
+            href="../"
+    >
+      KoshinLS<span>.</span>
+    </a>
+
+
+    <div class="check">
+      ✓
+    </div>
+
+
+    <p
+            class="eyebrow"
+            id="label"
+    >
+      LOGIN
+    </p>
+
+
+    <h1 id="title">
+      Ready.
+    </h1>
+
+
+    <p
+            class="sub"
+            id="text"
+    ></p>
+
+
+    <button
+            class="guest"
+            id="back"
+            type="button"
+    >
+      Back to sign in
+    </button>
+
+  </section>
+
+
+</main>
+
+
+<!-- SUPABASE -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script src="config.js"></script>
+
+<script src="script.js"></script>
+
 </body>
+
 </html>
