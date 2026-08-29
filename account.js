@@ -1,32 +1,40 @@
 const config = window.KLS_SUPABASE_CONFIG;
 
 if (!config || !config.url || !config.publishableKey) {
-  console.error("KoshinLS: Supabase configuration is missing.");
-} else {
 
-  const klsSupabase = window.supabase.createClient(
-    config.url,
-    config.publishableKey,
-    {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true
-      }
-    }
+  console.error(
+    "KoshinLS: Supabase configuration is missing."
   );
 
+} else {
 
-  const accountArea = document.getElementById("accountArea");
+  const klsSupabase =
+    window.supabase.createClient(
+      config.url,
+      config.publishableKey,
+      {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true
+        }
+      }
+    );
+
+
+  const accountArea =
+    document.getElementById("accountArea");
 
 
   function escapeHtml(value) {
+
     return String(value)
       .replaceAll("&", "&amp;")
       .replaceAll("<", "&lt;")
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
+
   }
 
 
@@ -37,9 +45,59 @@ if (!config || !config.url || !config.publishableKey) {
       user.user_metadata?.preferred_username ||
       user.user_metadata?.full_name ||
       user.user_metadata?.name ||
-      user.email ||
       "User"
     );
+
+  }
+
+
+  function getUsername(user) {
+
+    return (
+      user.user_metadata?.user_name ||
+      user.user_metadata?.preferred_username ||
+      "user"
+    );
+
+  }
+
+
+  function getAvatar(user) {
+
+    return (
+      user.user_metadata?.avatar_url ||
+      user.user_metadata?.picture ||
+      ""
+    );
+
+  }
+
+
+  function getProvider(user) {
+
+    const provider =
+      user.app_metadata?.provider ||
+      "unknown";
+
+    switch (provider) {
+
+      case "github":
+        return "GitHub";
+
+      case "google":
+        return "Google";
+
+      case "naver":
+        return "Naver";
+
+      case "azure":
+      case "microsoft":
+        return "Microsoft";
+
+      default:
+        return provider;
+
+    }
 
   }
 
@@ -50,10 +108,12 @@ if (!config || !config.url || !config.publishableKey) {
       return;
     }
 
+
     const {
       data: { session },
       error
-    } = await klsSupabase.auth.getSession();
+    } =
+      await klsSupabase.auth.getSession();
 
 
     if (error) {
@@ -80,18 +140,68 @@ if (!config || !config.url || !config.publishableKey) {
 
 
     const user = session.user;
-    const name = escapeHtml(getUserName(user));
+
+    const name =
+      escapeHtml(
+        getUserName(user)
+      );
+
+    const username =
+      escapeHtml(
+        getUsername(user)
+      );
+
+    const avatar =
+      escapeHtml(
+        getAvatar(user)
+      );
+
+    const provider =
+      escapeHtml(
+        getProvider(user)
+      );
+
+
+    const avatarHTML = avatar
+      ? `
+        <img
+          class="account-avatar"
+          src="${avatar}"
+          alt="${name}'s profile picture"
+          referrerpolicy="no-referrer"
+        >
+      `
+      : `
+        <div class="account-avatar account-avatar-fallback">
+          ${name.charAt(0).toUpperCase()}
+        </div>
+      `;
 
 
     accountArea.innerHTML = `
-      <div class="account">
 
-        <span>
-          Welcome, ${name}
-        </span>
+      <div class="account-card">
+
+        ${avatarHTML}
+
+        <div class="account-info">
+
+          <strong class="account-name">
+            ${name}
+          </strong>
+
+          <span class="account-username">
+            @${username}
+          </span>
+
+          <span class="account-provider">
+            ${provider} ✓
+          </span>
+
+        </div>
 
         <button
-          class="button"
+          class="button account-logout"
           type="button"
           id="logoutButton"
         >
@@ -99,11 +209,14 @@ if (!config || !config.url || !config.publishableKey) {
         </button>
 
       </div>
+
     `;
 
 
     const logoutButton =
-      document.getElementById("logoutButton");
+      document.getElementById(
+        "logoutButton"
+      );
 
 
     logoutButton.addEventListener(
@@ -111,7 +224,9 @@ if (!config || !config.url || !config.publishableKey) {
       async () => {
 
         logoutButton.disabled = true;
-        logoutButton.textContent = "Logging out...";
+
+        logoutButton.textContent =
+          "Logging out...";
 
 
         const { error } =
@@ -126,7 +241,9 @@ if (!config || !config.url || !config.publishableKey) {
           );
 
           logoutButton.disabled = false;
-          logoutButton.textContent = "Log out";
+
+          logoutButton.textContent =
+            "Log out";
 
           return;
         }
@@ -141,15 +258,16 @@ if (!config || !config.url || !config.publishableKey) {
 
 
   /*
-   * Check the saved session immediately.
+   * Check saved session.
    */
+
   updateAccount();
 
 
   /*
-   * Keep the website synchronized if the
-   * authentication state changes.
+   * React to login/logout.
    */
+
   klsSupabase.auth.onAuthStateChange(
     (event) => {
 

@@ -87,7 +87,7 @@ if (!config || !config.url || !config.publishableKey) {
           options: {
 
             redirectTo:
-              "https://koshinls.localplayer.dev/login/"
+              "https://koshinls.localplayer.dev/"
 
           }
 
@@ -225,3 +225,5 @@ if (!config || !config.url || !config.publishableKey) {
     );
 
 }
+redirectTo:
+  "https://koshinls.localplayer.dev/"
