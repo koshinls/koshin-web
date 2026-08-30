@@ -1,6 +1,5 @@
 const config = window.KLS_SUPABASE_CONFIG;
 
-
 if (!config || !config.url || !config.publishableKey) {
 
   console.error(
@@ -8,7 +7,6 @@ if (!config || !config.url || !config.publishableKey) {
   );
 
 } else {
-
 
   const klsSupabase =
     window.supabase.createClient(
@@ -59,89 +57,134 @@ if (!config || !config.url || !config.publishableKey) {
   }
 
 
-  /*
-   * GitHub login
-   */
-
-  const githubButton =
-    document.querySelector(
-      '[data-provider="GitHub"]'
-    );
-
-
-  githubButton.addEventListener(
-    "click",
-    async () => {
-
-      githubButton.disabled = true;
-
-      githubButton.textContent =
-        "Connecting to GitHub...";
-
-
-      const { error } =
-        await klsSupabase.auth.signInWithOAuth({
-
-          provider: "github",
-
-          options: {
-
-            redirectTo:
-              "https://koshinls.localplayer.dev/"
-
-          }
-
-        });
-
-
-      if (error) {
-
-        console.error(
-          "KoshinLS GitHub login:",
-          error
-        );
-
-        githubButton.disabled = false;
-
-        githubButton.textContent =
-          "GitHub";
-
-
-        showMessage(
-          "GITHUB",
-          "Login failed",
-          error.message
-        );
-
-      }
-
-    }
-  );
-
-
-  /*
-   * Other providers
-   */
+  /* -------------------------
+     GitHub + Google
+  ------------------------- */
 
   document
     .querySelectorAll(".provider")
     .forEach((button) => {
 
-      if (
-        button.dataset.provider === "GitHub"
-      ) {
-        return;
-      }
-
-
       button.addEventListener(
         "click",
-        () => {
+        async () => {
+
+          const provider =
+            button.dataset.provider;
+
+
+          /* -------------------------
+             GitHub
+          ------------------------- */
+
+          if (provider === "GitHub") {
+
+            button.disabled = true;
+
+            button.textContent =
+              "Connecting to GitHub...";
+
+
+            const { error } =
+              await klsSupabase.auth.signInWithOAuth({
+
+                provider: "github",
+
+                options: {
+
+                  redirectTo:
+                    "https://koshinls.localplayer.dev/"
+
+                }
+
+              });
+
+
+            if (error) {
+
+              console.error(
+                "KoshinLS GitHub login:",
+                error
+              );
+
+              button.disabled = false;
+
+              button.textContent =
+                "GitHub";
+
+
+              showMessage(
+                "GITHUB",
+                "Login failed",
+                error.message
+              );
+
+            }
+
+            return;
+          }
+
+
+          /* -------------------------
+             Google
+          ------------------------- */
+
+          if (provider === "Google") {
+
+            button.disabled = true;
+
+            button.textContent =
+              "Connecting to Google...";
+
+
+            const { error } =
+              await klsSupabase.auth.signInWithOAuth({
+
+                provider: "google",
+
+                options: {
+
+                  redirectTo:
+                    "https://koshinls.localplayer.dev/"
+
+                }
+
+              });
+
+
+            if (error) {
+
+              console.error(
+                "KoshinLS Google login:",
+                error
+              );
+
+              button.disabled = false;
+
+              button.textContent =
+                "Google";
+
+
+              showMessage(
+                "GOOGLE",
+                "Login failed",
+                error.message
+              );
+
+            }
+
+            return;
+          }
+
+
+          /* -------------------------
+             Other providers
+          ------------------------- */
 
           showMessage(
-            button.dataset.provider.toUpperCase(),
+            provider.toUpperCase(),
             "Coming soon",
-            `${button.dataset.provider} login will be connected next.`
+            `${provider} login will be connected next.`
           );
 
         }
@@ -150,9 +193,9 @@ if (!config || !config.url || !config.publishableKey) {
     });
 
 
-  /*
-   * Guest
-   */
+  /* -------------------------
+     Guest
+  ------------------------- */
 
   document
     .getElementById("guest")
@@ -170,15 +213,16 @@ if (!config || !config.url || !config.publishableKey) {
     );
 
 
-  /*
-   * Existing session
-   */
+  /* -------------------------
+     Existing session
+  ------------------------- */
 
   klsSupabase.auth.onAuthStateChange(
     (event, session) => {
 
       if (
-        event === "SIGNED_IN" &&
+        (event === "SIGNED_IN" ||
+         event === "INITIAL_SESSION") &&
         session?.user
       ) {
 
@@ -195,10 +239,29 @@ if (!config || !config.url || !config.publishableKey) {
           "Koshin";
 
 
+        let providerName =
+          "Account";
+
+
+        if (
+          user.app_metadata?.provider
+        ) {
+
+          providerName =
+            user.app_metadata.provider;
+
+        }
+
+
+        providerName =
+          providerName.charAt(0).toUpperCase() +
+          providerName.slice(1);
+
+
         showMessage(
           "SIGNED IN",
           `Welcome, ${name}.`,
-          "You are now signed in with GitHub."
+          `You are now signed in with ${providerName}.`
         );
 
       }
@@ -207,9 +270,9 @@ if (!config || !config.url || !config.publishableKey) {
   );
 
 
-  /*
-   * Back
-   */
+  /* -------------------------
+     Back
+  ------------------------- */
 
   document
     .getElementById("back")
@@ -225,5 +288,3 @@ if (!config || !config.url || !config.publishableKey) {
     );
 
 }
-redirectTo:
-  "https://koshinls.localplayer.dev/"
