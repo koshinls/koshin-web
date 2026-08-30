@@ -45,21 +45,18 @@ if (!config || !config.url || !config.publishableKey) {
   ) {
 
     label.textContent = labelText;
-
     title.textContent = titleText;
-
     text.textContent = textText;
 
     login.classList.add("hidden");
-
     message.classList.remove("hidden");
 
   }
 
 
-  /* -------------------------
-     GitHub + Google
-  ------------------------- */
+  /*
+   * Provider login buttons
+   */
 
   document
     .querySelectorAll(".provider")
@@ -73,14 +70,13 @@ if (!config || !config.url || !config.publishableKey) {
             button.dataset.provider;
 
 
-          /* -------------------------
-             GitHub
-          ------------------------- */
+          /*
+           * GitHub
+           */
 
           if (provider === "GitHub") {
 
             button.disabled = true;
-
             button.textContent =
               "Connecting to GitHub...";
 
@@ -91,10 +87,8 @@ if (!config || !config.url || !config.publishableKey) {
                 provider: "github",
 
                 options: {
-
                   redirectTo:
                     "https://koshinls.localplayer.dev/"
-
                 }
 
               });
@@ -108,9 +102,7 @@ if (!config || !config.url || !config.publishableKey) {
               );
 
               button.disabled = false;
-
-              button.textContent =
-                "GitHub";
+              button.textContent = "GitHub";
 
 
               showMessage(
@@ -125,14 +117,13 @@ if (!config || !config.url || !config.publishableKey) {
           }
 
 
-          /* -------------------------
-             Google
-          ------------------------- */
+          /*
+           * Google
+           */
 
           if (provider === "Google") {
 
             button.disabled = true;
-
             button.textContent =
               "Connecting to Google...";
 
@@ -143,10 +134,8 @@ if (!config || !config.url || !config.publishableKey) {
                 provider: "google",
 
                 options: {
-
                   redirectTo:
                     "https://koshinls.localplayer.dev/"
-
                 }
 
               });
@@ -160,9 +149,7 @@ if (!config || !config.url || !config.publishableKey) {
               );
 
               button.disabled = false;
-
-              button.textContent =
-                "Google";
+              button.textContent = "Google";
 
 
               showMessage(
@@ -177,9 +164,9 @@ if (!config || !config.url || !config.publishableKey) {
           }
 
 
-          /* -------------------------
-             Other providers
-          ------------------------- */
+          /*
+           * Naver / Microsoft
+           */
 
           showMessage(
             provider.toUpperCase(),
@@ -193,9 +180,9 @@ if (!config || !config.url || !config.publishableKey) {
     });
 
 
-  /* -------------------------
-     Guest
-  ------------------------- */
+  /*
+   * Guest
+   */
 
   document
     .getElementById("guest")
@@ -213,16 +200,18 @@ if (!config || !config.url || !config.publishableKey) {
     );
 
 
-  /* -------------------------
-     Check existing session once
-  ------------------------- */
+  /*
+   * Check saved session ONCE
+   * when the login page loads.
+   */
 
   async function checkExistingSession() {
 
     const {
       data: { session },
       error
-    } = await klsSupabase.auth.getSession();
+    } =
+      await klsSupabase.auth.getSession();
 
 
     if (error) {
@@ -241,7 +230,8 @@ if (!config || !config.url || !config.publishableKey) {
     }
 
 
-    const user = session.user;
+    const user =
+      session.user;
 
 
     const name =
@@ -274,15 +264,10 @@ if (!config || !config.url || !config.publishableKey) {
 
   checkExistingSession();
 
-      }
 
-    }
-  );
-
-
-  /* -------------------------
-     Back
-  ------------------------- */
+  /*
+   * Back
+   */
 
   document
     .getElementById("back")
@@ -291,7 +276,6 @@ if (!config || !config.url || !config.publishableKey) {
       () => {
 
         message.classList.add("hidden");
-
         login.classList.remove("hidden");
 
       }
