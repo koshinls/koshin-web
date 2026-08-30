@@ -214,55 +214,65 @@ if (!config || !config.url || !config.publishableKey) {
 
 
   /* -------------------------
-     Existing session
+     Check existing session once
   ------------------------- */
 
-  klsSupabase.auth.onAuthStateChange(
-    (event, session) => {
+  async function checkExistingSession() {
 
-      if (
-        (event === "SIGNED_IN" ||
-         event === "INITIAL_SESSION") &&
-        session?.user
-      ) {
-
-        const user =
-          session.user;
+    const {
+      data: { session },
+      error
+    } = await klsSupabase.auth.getSession();
 
 
-        const name =
-          user.user_metadata?.user_name ||
-          user.user_metadata?.preferred_username ||
-          user.user_metadata?.full_name ||
-          user.user_metadata?.name ||
-          user.email ||
-          "Koshin";
+    if (error) {
+
+      console.error(
+        "KoshinLS: Could not get session:",
+        error
+      );
+
+      return;
+    }
 
 
-        let providerName =
-          "Account";
+    if (!session?.user) {
+      return;
+    }
 
 
-        if (
-          user.app_metadata?.provider
-        ) {
-
-          providerName =
-            user.app_metadata.provider;
-
-        }
+    const user = session.user;
 
 
-        providerName =
-          providerName.charAt(0).toUpperCase() +
-          providerName.slice(1);
+    const name =
+      user.user_metadata?.user_name ||
+      user.user_metadata?.preferred_username ||
+      user.user_metadata?.full_name ||
+      user.user_metadata?.name ||
+      user.email ||
+      "Koshin";
 
 
-        showMessage(
-          "SIGNED IN",
-          `Welcome, ${name}.`,
-          `You are now signed in with ${providerName}.`
-        );
+    let providerName =
+      user.app_metadata?.provider ||
+      "Account";
+
+
+    providerName =
+      providerName.charAt(0).toUpperCase() +
+      providerName.slice(1);
+
+
+    showMessage(
+      "SIGNED IN",
+      `Welcome, ${name}.`,
+      `You are already signed in with ${providerName}.`
+    );
+
+  }
+
+
+  checkExistingSession();
 
       }
 
