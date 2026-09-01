@@ -27,19 +27,16 @@ if (!config || !config.url || !config.publishableKey) {
 
 
   function escapeHtml(value) {
-
     return String(value)
       .replaceAll("&", "&amp;")
       .replaceAll("<", "&lt;")
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
-
   }
 
 
   function getUserName(user) {
-
     return (
       user.user_metadata?.user_name ||
       user.user_metadata?.preferred_username ||
@@ -47,30 +44,25 @@ if (!config || !config.url || !config.publishableKey) {
       user.user_metadata?.name ||
       "User"
     );
-
   }
 
 
   function getUsername(user) {
-
     return (
       user.user_metadata?.user_name ||
       user.user_metadata?.preferred_username ||
       user.user_metadata?.name ||
       "user"
     );
-
   }
 
 
   function getAvatar(user) {
-
     return (
       user.user_metadata?.avatar_url ||
       user.user_metadata?.picture ||
       ""
     );
-
   }
 
 
@@ -99,7 +91,6 @@ if (!config || !config.url || !config.publishableKey) {
         return provider;
 
     }
-
   }
 
 
@@ -129,7 +120,7 @@ if (!config || !config.url || !config.publishableKey) {
 
 
     /*
-     * No session.
+     * No saved session.
      */
 
     if (!session?.user) {
@@ -145,11 +136,10 @@ if (!config || !config.url || !config.publishableKey) {
 
 
     /*
-     * Session found.
+     * Real signed-in user.
      */
 
-    const user =
-      session.user;
+    const user = session.user;
 
 
     const name =
@@ -281,8 +271,11 @@ if (!config || !config.url || !config.publishableKey) {
 
 
   /*
-   * Check the saved session ONCE
-   * when the home page loads.
+   * IMPORTANT:
+   * Check the saved Supabase session ONCE.
+   *
+   * There is intentionally NO
+   * onAuthStateChange() listener here.
    */
 
   updateAccount();
