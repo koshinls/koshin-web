@@ -56,6 +56,7 @@ if (!config || !config.url || !config.publishableKey) {
     return (
       user.user_metadata?.user_name ||
       user.user_metadata?.preferred_username ||
+      user.user_metadata?.name ||
       "user"
     );
 
@@ -127,6 +128,10 @@ if (!config || !config.url || !config.publishableKey) {
     }
 
 
+    /*
+     * No session.
+     */
+
     if (!session?.user) {
 
       accountArea.innerHTML = `
@@ -139,22 +144,31 @@ if (!config || !config.url || !config.publishableKey) {
     }
 
 
-    const user = session.user;
+    /*
+     * Session found.
+     */
+
+    const user =
+      session.user;
+
 
     const name =
       escapeHtml(
         getUserName(user)
       );
 
+
     const username =
       escapeHtml(
         getUsername(user)
       );
 
+
     const avatar =
       escapeHtml(
         getAvatar(user)
       );
+
 
     const provider =
       escapeHtml(
@@ -219,6 +233,11 @@ if (!config || !config.url || !config.publishableKey) {
       );
 
 
+    if (!logoutButton) {
+      return;
+    }
+
+
     logoutButton.addEventListener(
       "click",
       async () => {
@@ -249,7 +268,11 @@ if (!config || !config.url || !config.publishableKey) {
         }
 
 
-        updateAccount();
+        accountArea.innerHTML = `
+          <a class="button primary" href="login/">
+            Login
+          </a>
+        `;
 
       }
     );
@@ -258,27 +281,10 @@ if (!config || !config.url || !config.publishableKey) {
 
 
   /*
-   * Check saved session.
+   * Check the saved session ONCE
+   * when the home page loads.
    */
 
   updateAccount();
-
-
-  /*
-   * React to login/logout.
-   */
-
-  klsSupabase.auth.onAuthStateChange(
-    (event) => {
-
-      console.log(
-        "KoshinLS auth event:",
-        event
-      );
-
-      updateAccount();
-
-    }
-  );
 
 }
