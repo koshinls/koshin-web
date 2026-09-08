@@ -12,7 +12,7 @@ This is the source code for my website.
 
 ## Login
 
-GitHub, Google, Naver, Microsoft/Minecraft login available.
+Google, GitHub, and Guest login available.
 
 ## Info
 

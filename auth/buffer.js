@@ -1,140 +1,83 @@
-const config = window.KLS_SUPABASE_CONFIG;
+import { supabase } from '../supabase.js';
 
-if (
-  !config ||
-  !config.url ||
-  !config.publishableKey
-) {
+const status = document.getElementById("status");
 
-  console.error(
-    "KoshinLS: Supabase configuration is missing."
-  );
+async function finishLogin() {
+  if (!supabase) {
+    console.error("KoshinLS: Supabase client is not initialized.");
+    if (status) {
+      status.textContent = "Configuration error. Supabase environment is missing.";
+    }
+    return;
+  }
 
-} else {
+  if (status) {
+    status.textContent = "Checking your account…";
+  }
 
-  const supabaseClient =
-    window.supabase.createClient(
-      config.url,
-      config.publishableKey,
-      {
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true
-        }
-      }
-    );
+  /*
+   * Give Supabase a moment to process
+   * the OAuth callback.
+   */
+  await new Promise((resolve) => setTimeout(resolve, 500));
 
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession();
 
-  const status =
-    document.getElementById("status");
+  if (error) {
+    console.error("KoshinLS: Session error:", error);
+    if (status) {
+      status.textContent = "Login failed. Returning to login…";
+    }
 
+    setTimeout(() => {
+      window.location.href = "../login/";
+    }, 1500);
 
-  async function finishLogin() {
+    return;
+  }
 
-    status.textContent =
-      "Checking your account…";
-
-
+  if (!session?.user) {
     /*
-     * Give Supabase a moment to process
-     * the OAuth callback.
+     * OAuth may still be finishing.
+     * Try once more.
      */
+    if (status) {
+      status.textContent = "Finishing authentication…";
+    }
 
-    await new Promise(
-      resolve => setTimeout(resolve, 500)
-    );
-
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     const {
-      data: { session },
-      error
-    } =
-      await supabaseClient.auth.getSession();
+      data: retryData,
+    } = await supabase.auth.getSession();
 
-
-    if (error) {
-
-      console.error(
-        "KoshinLS: Session error:",
-        error
-      );
-
-      status.textContent =
-        "Login failed. Returning to login…";
-
+    if (!retryData?.session) {
+      if (status) {
+        status.textContent = "No session found. Returning to login…";
+      }
 
       setTimeout(() => {
-
-        window.location.href =
-          "../login/";
-
+        window.location.href = "../login/";
       }, 1500);
 
       return;
     }
-
-
-    if (!session?.user) {
-
-      /*
-       * OAuth may still be finishing.
-       * Try once more.
-       */
-
-      status.textContent =
-        "Finishing authentication…";
-
-
-      await new Promise(
-        resolve => setTimeout(resolve, 1000)
-      );
-
-
-      const {
-        data: retryData
-      } =
-        await supabaseClient.auth.getSession();
-
-
-      if (!retryData?.session) {
-
-        status.textContent =
-          "No session found. Returning to login…";
-
-
-        setTimeout(() => {
-
-          window.location.href =
-            "../login/";
-
-        }, 1500);
-
-        return;
-      }
-
-    }
-
-
-    /*
-     * Session exists.
-     * NOW go home.
-     */
-
-    status.textContent =
-      "Login complete. Welcome!";
-
-
-    setTimeout(() => {
-
-      window.location.href =
-        "../";
-
-    }, 300);
-
   }
 
+  /*
+   * Session exists.
+   * NOW go home.
+   */
+  if (status) {
+    status.textContent = "Login complete. Welcome!";
+  }
 
-  finishLogin();
-
+  setTimeout(() => {
+    window.location.href = "../";
+  }, 300);
 }
+
+finishLogin();

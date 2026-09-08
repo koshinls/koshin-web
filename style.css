@@ -62,19 +62,6 @@ h1 { max-width: 900px; margin: 16px 0 24px; font-size: clamp(4rem, 11vw, 8.5rem)
 .button:hover { border-color: var(--purple); transform: translateY(-1px); }
 .button.primary { background: var(--purple); border-color: var(--purple); color: #100b19; }
 
-.login-panel {
-  margin-top: 34px; width: min(100%, 650px); padding: 20px; border: 1px solid var(--line);
-  border-radius: 16px; background: rgba(18,16,26,.78); box-shadow: 0 18px 60px rgba(0,0,0,.18);
-}
-.login-title { font: 600 1rem "Space Grotesk", sans-serif; margin-bottom: 12px; }
-.login-buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.login-button, .guest-button {
-  border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; color: var(--text);
-  background: var(--panel-2); cursor: pointer; transition: .2s ease;
-}
-.login-button:hover, .guest-button:hover { border-color: var(--purple); transform: translateY(-1px); }
-.guest-button { width: 100%; margin-top: 8px; }
-.login-note { margin: 10px 0 0; color: var(--muted); font-size: .75rem; }
 
 .section { border-top: 1px solid var(--line); }
 .section-heading h2 { max-width: 780px; margin: 12px 0 45px; font-size: clamp(2.3rem, 5vw, 4.5rem); }
@@ -99,7 +86,6 @@ footer { max-width: 1120px; margin: auto; padding: 30px 28px 50px; display: flex
   .about-grid, .cards { grid-template-columns: 1fr; }
   .hero { min-height: 75vh; }
   h1 { font-size: clamp(3.5rem, 18vw, 6rem); }
-  .login-buttons { grid-template-columns: repeat(2, 1fr); }
   footer { flex-direction: column; }
 }
 
@@ -118,87 +104,49 @@ footer { max-width: 1120px; margin: auto; padding: 30px 28px 50px; display: flex
   margin: 28px 0;
 }
 
-.account-card {
+/* =========================
+   AUTH BUFFER
+========================= */
+
+.auth-buffer {
+  min-height: 100vh;
   display: flex;
   align-items: center;
-  gap: 14px;
+  justify-content: center;
+  padding: 24px;
+}
 
-  width: fit-content;
-  max-width: 100%;
-
-  padding: 10px 12px;
-
+.auth-buffer-card {
+  width: min(92vw, 420px);
+  padding: 40px 32px;
   border: 1px solid var(--line);
-  border-radius: 18px;
-
-  background: rgba(21, 18, 30, 0.85);
-
-  box-shadow:
-    0 12px 35px rgba(0, 0, 0, 0.2);
+  border-radius: 20px;
+  background: linear-gradient(145deg, var(--panel-2), var(--panel));
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
-.account-avatar {
-  width: 52px;
-  height: 52px;
-
-  flex: 0 0 52px;
-
-  border-radius: 50%;
-
-  object-fit: cover;
-
-  background: #241d32;
+.auth-buffer-card h1 {
+  font-size: 1.8rem;
+  margin: 16px 0 8px;
 }
 
-.account-avatar-fallback {
-  display: grid;
-  place-items: center;
-
-  color: var(--purple2);
-
-  font-size: 1.2rem;
-  font-weight: 800;
-}
-
-.account-info {
-  display: flex;
-  flex-direction: column;
-
-  min-width: 100px;
-}
-
-.account-name {
-  font-size: 0.98rem;
-}
-
-.account-username {
+.auth-buffer-card p {
   color: var(--muted);
-
-  font-size: 0.8rem;
+  font-size: 0.95rem;
+  margin-bottom: 24px;
 }
 
-.account-provider {
-  margin-top: 3px;
-
-  color: var(--purple2);
-
-  font-size: 0.7rem;
-  font-weight: 700;
+.auth-spinner {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 16px;
+  border: 3px solid rgba(155, 108, 255, 0.2);
+  border-top-color: var(--purple-2);
+  border-radius: 50%;
+  animation: auth-spin 0.8s linear infinite;
 }
 
-.account-logout {
-  margin-left: 8px;
-  width: auto;
-}
-
-@media (max-width: 600px) {
-
-  .account-card {
-    width: 100%;
-  }
-
-  .account-logout {
-    margin-left: auto;
-  }
-
+@keyframes auth-spin {
+  to { transform: rotate(360deg); }
 }
