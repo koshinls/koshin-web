@@ -232,13 +232,10 @@ async function checkExistingSession() {
     user.email ||
     "Koshin";
 
-  let providerName = user.app_metadata?.provider || "Account";
-  providerName = providerName.charAt(0).toUpperCase() + providerName.slice(1);
-
   showMessage(
     "SIGNED IN",
     `Welcome, ${name}.`,
-    `You are already signed in with ${providerName}.`
+    "You're already signed in."
   );
 }
 
