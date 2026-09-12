@@ -2,7 +2,6 @@
 <html lang="en">
 
 <head>
-
   <meta charset="utf-8">
 
   <meta
@@ -17,16 +16,15 @@
 
   <title>KoshinLS — Sign in</title>
 
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
   <link rel="stylesheet" href="../style.css">
   <link rel="stylesheet" href="style.css">
 
 </head>
 
-
 <body>
 
 <main class="shell">
-
 
   <!-- LOGIN -->
 
@@ -42,48 +40,64 @@
       KoshinLS<span>.</span>
     </a>
 
-
     <p class="eyebrow">
       ACCOUNT
     </p>
-
 
     <h1>
       Welcome back.
     </h1>
 
-
     <p class="sub">
       Sign in to your Koshin account.
     </p>
 
-
     <div class="providers">
 
       <button
-              class="provider"
+              id="googleLogin"
+              class="button"
               type="button"
-              data-provider="Google"
       >
-        Google
+        <img
+                src="/google-icon.png"
+                alt=""
+                class="provider-icon"
+        >
+        Continue with Google
       </button>
 
+      <button
+              id="githubLogin"
+              class="button"
+              type="button"
+      >
+        <img
+                src="/github-icon.png"
+                alt=""
+                class="provider-icon"
+        >
+        Continue with GitHub
+      </button>
 
       <button
-              class="provider"
+              id="klsLogin"
+              class="button"
               type="button"
-              data-provider="GitHub"
       >
-        GitHub
+        <img
+                src="/icon.svg"
+                alt=""
+                class="provider-icon"
+        >
+        Continue with KLS
       </button>
 
     </div>
-
 
     <div class="divider">
       <span>or</span>
     </div>
-
 
     <button
             class="guest"
@@ -91,6 +105,23 @@
             type="button"
     >
       Continue as guest
+    </button>
+
+    <div class="divider">
+      <span>or</span>
+    </div>
+
+    <button
+            id="createAccount"
+            class="button"
+            type="button"
+    >
+      <img
+              src="/icon.svg"
+              alt=""
+              class="provider-icon"
+      >
+      Create your KLS account
     </button>
 
   </section>
@@ -110,11 +141,9 @@
       KoshinLS<span>.</span>
     </a>
 
-
     <div class="check">
       ✓
     </div>
-
 
     <p
             class="eyebrow"
@@ -123,17 +152,14 @@
       LOGIN
     </p>
 
-
     <h1 id="title">
       Ready.
     </h1>
-
 
     <p
             class="sub"
             id="text"
     ></p>
-
 
     <button
             class="guest"
@@ -145,11 +171,12 @@
 
   </section>
 
-
 </main>
 
-
-<script type="module" src="./script.js"></script>
+<script
+        type="module"
+        src="./script.js"
+></script>
 
 </body>
 
