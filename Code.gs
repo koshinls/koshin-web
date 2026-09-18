@@ -1,528 +1,329 @@
 /**
- * ============================================================================
- * KLS LOGIN SYSTEM - GOOGLE APPS SCRIPT WEB APP BACKEND (Code.gs)
- * ============================================================================
- *
+ * KLS LOGIN SYSTEM - Google Apps Script Web App
  * Spreadsheet: "KLS login sys"
- * Sheet 1 Columns (Row 1):
- *   A: id
- *   B: username
- *   C: display_name
- *   D: email
- *   E: avatar_url
- *   F: created_at
- *   G: last_login
- *   H: status
- *   I: role
- *   J: password
  *
- * SECURITY & BEHAVIOR CONSTRAINTS:
- * 1. The Google Sheet remains 100% private.
- * 2. The client browser communicates solely with this Web App URL.
- * 3. Browser never receives Google Sheet credentials or service-account keys.
- * 4. Users may create and manage ONLY their own KLS account.
- * 5. A user must NEVER be able to edit or inspect another user's account.
- * 6. Never expose all users' accounts or passwords in any API response.
- * 7. Password handling is isolated for future cryptographic hashing upgrades.
- * ============================================================================
+ * Row 1:
+ * A id | B username | C display_name | D email | E avatar_url
+ * F created_at | G last_login | H status | I role | J password
+ *
+ * Deploy as a Web App. Keep the spreadsheet private.
+ *
+ * NOTE: This hobby version intentionally stores the password in J because
+ * the current KLS design requires owner-only password retrieval. Password
+ * handling is isolated so it can later be replaced with hashing.
  */
 
-// Optional: If running as a standalone script, set your Spreadsheet ID here.
-// When bound to the spreadsheet (Extensions > Apps Script), leave empty.
-var SPREADSHEET_ID = "";
-var SHEET_NAME = "KLS login sys";
+const SHEET_NAME = 'KLS login sys';
+const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
+const SESSION_PREFIX = 'KLS_SESSION_';
 
-/**
- * PASSWORD HANDLING MODULE (ISOLATED)
- *
- * Currently stores passwords directly for early hobby phase as requested.
- * When migrating to hashed passwords (e.g. SHA-256 + salt or bcrypt),
- * ONLY the functions inside this object need to be modified.
- */
-var PasswordService = {
-  /**
-   * Prepares a raw password for storage in the spreadsheet.
-   * @param {string} rawPassword
-   * @return {string}
-   */
-  prepareForStorage: function (rawPassword) {
-    if (typeof rawPassword !== "string" || rawPassword.trim().length === 0) {
-      throw new Error("Password must be a non-empty string.");
+function doGet(e) {
+  try {
+    const p = (e && e.parameter) || {};
+    const action = String(p.action || 'ping');
+
+    switch (action) {
+      case 'ping':
+        return jsonResponse({
+          success: true,
+          service: 'KLS Account System',
+          status: 'online',
+          timestamp: new Date().toISOString()
+        });
+      case 'getAccount':
+        return jsonResponse(handleGetAccount(p.sessionToken));
+      case 'getOwnPassword':
+        return jsonResponse(handleGetOwnPassword(p.sessionToken));
+      default:
+        return jsonResponse(fail('Unknown action.'));
     }
-    // Future upgrade: return Utilities.computeHmacSha256(rawPassword, salt);
-    return rawPassword;
-  },
-
-  /**
-   * Verifies if the input password matches the stored password.
-   * @param {string} inputPassword
-   * @param {string} storedPassword
-   * @return {boolean}
-   */
-  verify: function (inputPassword, storedPassword) {
-    if (!inputPassword || !storedPassword) return false;
-    return String(inputPassword) === String(storedPassword);
+  } catch (err) {
+    return jsonResponse(serverError(err));
   }
-};
-
-/**
- * Returns a standardized JSON response with proper CORS headers.
- */
-function jsonResponse(data) {
-  return ContentService.createTextOutput(JSON.stringify(data))
-    .setMimeType(ContentService.MimeType.JSON);
 }
 
-/**
- * Gets the target sheet in the spreadsheet.
- */
-function getTargetSheet() {
-  var ss;
-  if (SPREADSHEET_ID && SPREADSHEET_ID.trim().length > 0) {
-    ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  } else {
-    ss = SpreadsheetApp.getActiveSpreadsheet();
+function doPost(e) {
+  try {
+    const body = parseBody(e);
+    const action = String(body.action || '');
+
+    switch (action) {
+      case 'createAccount':
+        return jsonResponse(handleCreateAccount(body));
+      case 'loginAccount':
+        return jsonResponse(handleLoginAccount(body));
+      case 'updateAccount':
+        return jsonResponse(handleUpdateAccount(body));
+      case 'getAccount':
+        return jsonResponse(handleGetAccount(body.sessionToken));
+      case 'getOwnPassword':
+        return jsonResponse(handleGetOwnPassword(body.sessionToken));
+      case 'logout':
+        return jsonResponse(handleLogout(body.sessionToken));
+      default:
+        return jsonResponse(fail('Unknown action.'));
+    }
+  } catch (err) {
+    return jsonResponse(serverError(err));
+  }
+}
+
+function handleCreateAccount(input) {
+  const username = clean(input.username, 40);
+  const displayName = clean(input.display_name, 80);
+  const email = clean(input.email, 160).toLowerCase();
+  const password = PasswordService.prepareForStorage(input.password);
+
+  if (!username) return fail('Username is required.');
+  if (!displayName) return fail('Display name is required.');
+  if (!email || !email.includes('@')) return fail('A valid email is required.');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sheet = getSheet();
+    const rows = readRows(sheet);
+
+    if (rows.some(r => r.username.toLowerCase() === username.toLowerCase())) {
+      return fail('Username already in use.');
+    }
+    if (rows.some(r => r.email.toLowerCase() === email)) {
+      return fail('Email already in use.');
+    }
+
+    const id = generateAccountId(rows);
+    const now = new Date().toISOString();
+
+    sheet.appendRow([id, username, displayName, email, '', now, '', 'active', 'user', password]);
+
+    return {
+      success: true,
+      account: safeAccount({
+        id, username, display_name: displayName, email, avatar_url: '',
+        created_at: now, last_login: '', status: 'active', role: 'user'
+      })
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function handleLoginAccount(input) {
+  const identifier = clean(input.identifier || input.username || input.email, 160);
+  const password = String(input.password || '');
+  if (!identifier || !password) return fail('Username/email and password are required.');
+
+  const sheet = getSheet();
+  const rows = readRows(sheet);
+  const index = rows.findIndex(r =>
+    r.username.toLowerCase() === identifier.toLowerCase() ||
+    r.email.toLowerCase() === identifier.toLowerCase()
+  );
+
+  if (index < 0) return fail('Invalid credentials.');
+
+  const account = rows[index];
+  if (String(account.status).toLowerCase() !== 'active') return fail('Account is disabled.');
+  if (!PasswordService.verify(password, account.password)) return fail('Invalid credentials.');
+
+  const now = new Date().toISOString();
+  sheet.getRange(index + 2, 7).setValue(now);
+
+  return {
+    success: true,
+    sessionToken: createSession(account.id),
+    expiresAt: new Date(Date.now() + SESSION_TTL_SECONDS * 1000).toISOString(),
+    account: safeAccount({ ...account, last_login: now })
+  };
+}
+
+function handleGetAccount(sessionToken) {
+  const session = requireSession(sessionToken);
+  if (!session.success) return session;
+
+  const account = findAccountById(session.accountId);
+  if (!account) return fail('Account not found.');
+
+  return { success: true, account: safeAccount(account) };
+}
+
+function handleUpdateAccount(input) {
+  const session = requireSession(input.sessionToken);
+  if (!session.success) return session;
+
+  const account = findAccountById(session.accountId);
+  if (!account) return fail('Account not found.');
+
+  const sheet = getSheet();
+  const username = clean(input.username !== undefined ? input.username : account.username, 40);
+  const displayName = clean(input.display_name !== undefined ? input.display_name : account.display_name, 80);
+  const email = clean(input.email !== undefined ? input.email : account.email, 160).toLowerCase();
+  const avatarUrl = clean(input.avatar_url !== undefined ? input.avatar_url : account.avatar_url, 500);
+
+  if (!username) return fail('Username is required.');
+  if (!displayName) return fail('Display name is required.');
+  if (!email || !email.includes('@')) return fail('A valid email is required.');
+
+  const rows = readRows(sheet);
+  if (rows.some(r => r.id !== account.id && r.username.toLowerCase() === username.toLowerCase())) {
+    return fail('Username already in use.');
+  }
+  if (rows.some(r => r.id !== account.id && r.email.toLowerCase() === email)) {
+    return fail('Email already in use.');
   }
 
-  if (!ss) {
-    throw new Error("Could not connect to Google Spreadsheet. Ensure script is bound or SPREADSHEET_ID is set.");
+  // Only owner-editable columns are written. id/status/role/created_at are untouched.
+  sheet.getRange(account.rowNumber, 2, 1, 4).setValues([[username, displayName, email, avatarUrl]]);
+
+  if (input.password !== undefined) {
+    sheet.getRange(account.rowNumber, 10).setValue(
+      PasswordService.prepareForStorage(input.password)
+    );
   }
 
-  var sheet = ss.getSheetByName(SHEET_NAME);
-  if (!sheet) {
-    // Fall back to first sheet if named differently
-    sheet = ss.getSheets()[0];
+  return { success: true, account: safeAccount(findAccountById(session.accountId)) };
+}
+
+function handleGetOwnPassword(sessionToken) {
+  const session = requireSession(sessionToken);
+  if (!session.success) return session;
+
+  const account = findAccountById(session.accountId);
+  if (!account) return fail('Account not found.');
+
+  // Deliberately available only to the authenticated owner in this hobby version.
+  return { success: true, password: account.password };
+}
+
+function handleLogout(sessionToken) {
+  const token = normalizeToken(sessionToken);
+  if (token) PropertiesService.getScriptProperties().deleteProperty(SESSION_PREFIX + token);
+  return { success: true };
+}
+
+function createSession(accountId) {
+  const token = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
+  const session = {
+    accountId: accountId,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + SESSION_TTL_SECONDS * 1000
+  };
+  PropertiesService.getScriptProperties().setProperty(
+    SESSION_PREFIX + token,
+    JSON.stringify(session)
+  );
+  return token;
+}
+
+function requireSession(sessionToken) {
+  const token = normalizeToken(sessionToken);
+  if (!token) return fail('Unauthorized.');
+
+  const props = PropertiesService.getScriptProperties();
+  const key = SESSION_PREFIX + token;
+  const raw = props.getProperty(key);
+  if (!raw) return fail('Unauthorized.');
+
+  let session;
+  try {
+    session = JSON.parse(raw);
+  } catch (err) {
+    props.deleteProperty(key);
+    return fail('Unauthorized.');
   }
+
+  if (!session.expiresAt || Date.now() >= Number(session.expiresAt)) {
+    props.deleteProperty(key);
+    return fail('Session expired.');
+  }
+
+  return { success: true, accountId: String(session.accountId) };
+}
+
+function getSheet() {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  if (!spreadsheet) throw new Error('Bind this Apps Script to the KLS login sys spreadsheet.');
+
+  const sheet = spreadsheet.getSheetByName(SHEET_NAME);
+  if (!sheet) throw new Error('Sheet "' + SHEET_NAME + '" was not found.');
   return sheet;
 }
 
-/**
- * Generates a tamper-resistant session token derived from account ID & password.
- * Changes automatically if the user changes their password.
- */
-function generateSessionToken(accountId, storedPassword) {
-  var raw = accountId + ":" + storedPassword;
-  var signature = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, raw, Utilities.Charset.UTF_8);
-  return signature.map(function (byte) {
-    return ("0" + (byte & 0xFF).toString(16)).slice(-2);
-  }).join("");
+function readRows(sheet) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+
+  return sheet.getRange(2, 1, lastRow - 1, 10).getValues()
+    .map((v, i) => ({
+      rowNumber: i + 2,
+      id: String(v[0] || ''),
+      username: String(v[1] || ''),
+      display_name: String(v[2] || ''),
+      email: String(v[3] || ''),
+      avatar_url: String(v[4] || ''),
+      created_at: String(v[5] || ''),
+      last_login: String(v[6] || ''),
+      status: String(v[7] || ''),
+      role: String(v[8] || ''),
+      password: String(v[9] || '')
+    }))
+    .filter(r => r.id);
 }
 
-/**
- * Sanitizes an account row before returning to client.
- * Strips password and internal values completely.
- */
-function sanitizeAccount(rowValues) {
+function findAccountById(id) {
+  return readRows(getSheet()).find(r => r.id === String(id)) || null;
+}
+
+const PasswordService = {
+  prepareForStorage: function(rawPassword) {
+    const password = String(rawPassword || '');
+    if (!password || password.length < 4) throw new Error('Password must be at least 4 characters.');
+    return password;
+  },
+  verify: function(inputPassword, storedPassword) {
+    return String(inputPassword || '') === String(storedPassword || '');
+  }
+};
+
+function safeAccount(account) {
   return {
-    id: String(rowValues[0] || ""),
-    username: String(rowValues[1] || ""),
-    display_name: String(rowValues[2] || ""),
-    email: String(rowValues[3] || ""),
-    avatar_url: String(rowValues[4] || ""),
-    created_at: String(rowValues[5] || ""),
-    last_login: String(rowValues[6] || ""),
-    status: String(rowValues[7] || "active"),
-    role: String(rowValues[8] || "user")
+    id: account.id,
+    username: account.username,
+    display_name: account.display_name,
+    email: account.email,
+    avatar_url: account.avatar_url,
+    created_at: account.created_at,
+    last_login: account.last_login,
+    status: account.status,
+    role: account.role
   };
 }
 
-/**
- * Finds a row by Account ID.
- * Returns { rowIndex: number, rowValues: Array } or null.
- * Note: rowIndex is 1-based sheet row index.
- */
-function findRowById(sheet, accountId) {
-  if (!accountId) return null;
-  var data = sheet.getDataRange().getValues();
-  // Row 0 is header row
-  for (var i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === String(accountId)) {
-      return { rowIndex: i + 1, rowValues: data[i] };
-    }
-  }
-  return null;
+function generateAccountId(rows) {
+  let id;
+  do {
+    id = 'kls_' + Utilities.getUuid().replace(/-/g, '').slice(0, 16);
+  } while (rows.some(r => r.id === id));
+  return id;
 }
 
-/**
- * Finds a row by username or email.
- */
-function findRowByUsernameOrEmail(sheet, query) {
-  if (!query) return null;
-  var q = String(query).trim().toLowerCase();
-  var data = sheet.getDataRange().getValues();
-  for (var i = 1; i < data.length; i++) {
-    var u = String(data[i][1]).trim().toLowerCase();
-    var e = String(data[i][3]).trim().toLowerCase();
-    if (u === q || e === q) {
-      return { rowIndex: i + 1, rowValues: data[i] };
-    }
-  }
-  return null;
+function normalizeToken(value) { return String(value || '').trim(); }
+function clean(value, maxLength) { return String(value || '').trim().slice(0, maxLength); }
+
+function parseBody(e) {
+  if (!e || !e.postData || !e.postData.contents) return {};
+  try { return JSON.parse(String(e.postData.contents)); }
+  catch (err) { return e.parameter || {}; }
 }
 
-/**
- * Verifies that the request has permission to access this account.
- * Caller must provide either a valid session token or the correct password.
- */
-function authenticateCaller(rowValues, token, password) {
-  var accountId = String(rowValues[0]);
-  var storedPassword = String(rowValues[9]);
+function fail(message) { return { success: false, error: message }; }
 
-  if (token && typeof token === "string") {
-    var expectedToken = generateSessionToken(accountId, storedPassword);
-    if (expectedToken === token) {
-      return true;
-    }
-  }
-
-  if (password && typeof password === "string") {
-    if (PasswordService.verify(password, storedPassword)) {
-      return true;
-    }
-  }
-
-  return false;
+function serverError(err) {
+  console.error(err);
+  return { success: false, error: 'Server error.' };
 }
 
-/**
- * ACTION: createAccount
- * Validates inputs, creates new row, auto-generates id/timestamps/status/role.
- */
-function handleCreateAccount(data) {
-  var lock = LockService.getScriptLock();
-  try {
-    lock.waitLock(10000);
-  } catch (err) {
-    return { success: false, error: "Server busy. Please try again." };
-  }
-
-  try {
-    var username = String(data.username || "").trim();
-    var displayName = String(data.display_name || "").trim() || username;
-    var email = String(data.email || "").trim().toLowerCase();
-    var rawPassword = String(data.password || "");
-
-    // Validation
-    if (!username || username.length < 3) {
-      return { success: false, error: "Username must be at least 3 characters long." };
-    }
-    if (!/^[a-zA-Z0-9_.-]+$/.test(username)) {
-      return { success: false, error: "Username may only contain letters, numbers, dots, dashes, and underscores." };
-    }
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return { success: false, error: "A valid email address is required." };
-    }
-    if (!rawPassword || rawPassword.length < 4) {
-      return { success: false, error: "Password must be at least 4 characters long." };
-    }
-
-    var sheet = getTargetSheet();
-    var allData = sheet.getDataRange().getValues();
-
-    // Check for duplicate username or email
-    for (var i = 1; i < allData.length; i++) {
-      var rowUser = String(allData[i][1]).trim().toLowerCase();
-      var rowEmail = String(allData[i][3]).trim().toLowerCase();
-
-      if (rowUser === username.toLowerCase()) {
-        return { success: false, error: "Username is already taken." };
-      }
-      if (rowEmail === email) {
-        return { success: false, error: "An account with this email already exists." };
-      }
-    }
-
-    // Auto-generate fields
-    var id = "kls_" + Utilities.getUuid().replace(/-/g, "").slice(0, 16);
-    var now = new Date().toISOString();
-    var status = "active";
-    var role = "user";
-    var avatarUrl = String(data.avatar_url || "").trim();
-    var storedPassword = PasswordService.prepareForStorage(rawPassword);
-
-    var newRow = [
-      id,              // A: id
-      username,        // B: username
-      displayName,     // C: display_name
-      email,           // D: email
-      avatarUrl,       // E: avatar_url
-      now,             // F: created_at
-      now,             // G: last_login
-      status,          // H: status
-      role,            // I: role
-      storedPassword   // J: password
-    ];
-
-    sheet.appendRow(newRow);
-
-    var token = generateSessionToken(id, storedPassword);
-    var safeAccount = sanitizeAccount(newRow);
-
-    return {
-      success: true,
-      message: "Account created successfully.",
-      account: safeAccount,
-      token: token
-    };
-  } finally {
-    lock.releaseLock();
-  }
-}
-
-/**
- * ACTION: getAccount
- * Retrieves ONLY the caller's own account.
- * Strictly verifies identity via token or password.
- */
-function handleGetAccount(data) {
-  var accountId = String(data.id || "").trim();
-  var token = String(data.token || "").trim();
-  var password = String(data.password || "");
-
-  if (!accountId) {
-    return { success: false, error: "Account ID is required." };
-  }
-
-  var sheet = getTargetSheet();
-  var found = findRowById(sheet, accountId);
-  if (!found) {
-    return { success: false, error: "Account not found." };
-  }
-
-  var isAuthorized = authenticateCaller(found.rowValues, token, password);
-  if (!isAuthorized) {
-    return { success: false, error: "Unauthorized. You cannot view other accounts." };
-  }
-
-  return {
-    success: true,
-    account: sanitizeAccount(found.rowValues),
-    token: generateSessionToken(accountId, String(found.rowValues[9]))
-  };
-}
-
-/**
- * ACTION: updateAccount
- * Allows the caller to update ONLY their own account.
- * Allowed updates: username, display_name, email, avatar_url, password.
- * Client CANNOT modify id, role, status, or created_at.
- */
-function handleUpdateAccount(data) {
-  var lock = LockService.getScriptLock();
-  try {
-    lock.waitLock(10000);
-  } catch (err) {
-    return { success: false, error: "Server busy. Please try again." };
-  }
-
-  try {
-    var accountId = String(data.id || "").trim();
-    var token = String(data.token || "").trim();
-    var currentPassword = String(data.current_password || data.password || "");
-    var updates = data.updates || {};
-
-    if (!accountId) {
-      return { success: false, error: "Account ID is required." };
-    }
-
-    var sheet = getTargetSheet();
-    var found = findRowById(sheet, accountId);
-    if (!found) {
-      return { success: false, error: "Account not found." };
-    }
-
-    var isAuthorized = authenticateCaller(found.rowValues, token, currentPassword);
-    if (!isAuthorized) {
-      return { success: false, error: "Unauthorized. You cannot edit other accounts." };
-    }
-
-    var rowValues = found.rowValues.slice();
-    var allData = sheet.getDataRange().getValues();
-
-    // 1. Update username if provided
-    if (updates.username !== undefined) {
-      var newUsername = String(updates.username).trim();
-      if (!newUsername || newUsername.length < 3) {
-        return { success: false, error: "Username must be at least 3 characters." };
-      }
-      if (!/^[a-zA-Z0-9_.-]+$/.test(newUsername)) {
-        return { success: false, error: "Username may only contain letters, numbers, dots, dashes, and underscores." };
-      }
-      // Check uniqueness against other users
-      for (var i = 1; i < allData.length; i++) {
-        if (i + 1 !== found.rowIndex && String(allData[i][1]).trim().toLowerCase() === newUsername.toLowerCase()) {
-          return { success: false, error: "Username is already taken by another account." };
-        }
-      }
-      rowValues[1] = newUsername;
-    }
-
-    // 2. Update display_name if provided
-    if (updates.display_name !== undefined) {
-      var newDisplayName = String(updates.display_name).trim();
-      if (!newDisplayName) newDisplayName = rowValues[1]; // fallback to username
-      rowValues[2] = newDisplayName;
-    }
-
-    // 3. Update email if provided
-    if (updates.email !== undefined) {
-      var newEmail = String(updates.email).trim().toLowerCase();
-      if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
-        return { success: false, error: "Invalid email format." };
-      }
-      // Check uniqueness against other users
-      for (var j = 1; j < allData.length; j++) {
-        if (j + 1 !== found.rowIndex && String(allData[j][3]).trim().toLowerCase() === newEmail) {
-          return { success: false, error: "Email is already in use by another account." };
-        }
-      }
-      rowValues[3] = newEmail;
-    }
-
-    // 4. Update avatar_url if provided
-    if (updates.avatar_url !== undefined) {
-      rowValues[4] = String(updates.avatar_url).trim();
-    }
-
-    // 5. Update password if provided
-    if (updates.password !== undefined && updates.password !== "") {
-      var newPassword = String(updates.password);
-      if (newPassword.length < 4) {
-        return { success: false, error: "New password must be at least 4 characters." };
-      }
-      rowValues[9] = PasswordService.prepareForStorage(newPassword);
-    }
-
-    // Explicit security enforcement: NEVER allow modifying id, created_at, status, or role via client
-    // rowValues[0], rowValues[5], rowValues[7], rowValues[8] remain original
-
-    // Write updated row back to sheet
-    var range = sheet.getRange(found.rowIndex, 1, 1, 10);
-    range.setValues([rowValues]);
-
-    var updatedToken = generateSessionToken(accountId, String(rowValues[9]));
-
-    return {
-      success: true,
-      message: "Account updated successfully.",
-      account: sanitizeAccount(rowValues),
-      token: updatedToken
-    };
-  } finally {
-    lock.releaseLock();
-  }
-}
-
-/**
- * ACTION: loginAccount (Helper action for authenticating existing KLS users)
- */
-function handleLoginAccount(data) {
-  var usernameOrEmail = String(data.usernameOrEmail || data.username || data.email || "").trim();
-  var password = String(data.password || "");
-
-  if (!usernameOrEmail || !password) {
-    return { success: false, error: "Username/email and password are required." };
-  }
-
-  var sheet = getTargetSheet();
-  var found = findRowByUsernameOrEmail(sheet, usernameOrEmail);
-  if (!found) {
-    return { success: false, error: "Invalid credentials." };
-  }
-
-  var storedPassword = String(found.rowValues[9]);
-  if (!PasswordService.verify(password, storedPassword)) {
-    return { success: false, error: "Invalid credentials." };
-  }
-
-  var now = new Date().toISOString();
-  sheet.getRange(found.rowIndex, 7).setValue(now); // Col G: last_login
-  found.rowValues[6] = now;
-
-  var accountId = String(found.rowValues[0]);
-  var token = generateSessionToken(accountId, storedPassword);
-
-  return {
-    success: true,
-    message: "Login successful.",
-    account: sanitizeAccount(found.rowValues),
-    token: token
-  };
-}
-
-/**
- * Web App HTTP POST Handler (Primary API Entry Point)
- * Receives JSON payloads sent with Content-Type: text/plain to avoid CORS issues.
- */
-function doPost(e) {
-  try {
-    var payload = {};
-    if (e && e.postData && e.postData.contents) {
-      try {
-        payload = JSON.parse(e.postData.contents);
-      } catch (parseError) {
-        return jsonResponse({ success: false, error: "Invalid JSON format." });
-      }
-    } else if (e && e.parameter) {
-      payload = e.parameter;
-    }
-
-    var action = payload.action;
-    var result;
-
-    switch (action) {
-      case "createAccount":
-        result = handleCreateAccount(payload);
-        break;
-
-      case "getAccount":
-        result = handleGetAccount(payload);
-        break;
-
-      case "updateAccount":
-        result = handleUpdateAccount(payload);
-        break;
-
-      case "loginAccount":
-        result = handleLoginAccount(payload);
-        break;
-
-      default:
-        result = { success: false, error: 'Unknown action "' + action + '".' };
-        break;
-    }
-
-    return jsonResponse(result);
-  } catch (globalError) {
-    return jsonResponse({
-      success: false,
-      error: "Server error: " + globalError.toString()
-    });
-  }
-}
-
-/**
- * Web App HTTP GET Handler (Health check & fallback)
- */
-function doGet(e) {
-  var action = e && e.parameter ? e.parameter.action : null;
-  if (action === "ping") {
-    return jsonResponse({
-      success: true,
-      service: "KLS Account System",
-      status: "online",
-      timestamp: new Date().toISOString()
-    });
-  }
-
-  if (action === "getAccount") {
-    return jsonResponse(handleGetAccount(e.parameter));
-  }
-
-  return jsonResponse({
-    service: "KLS Account System Web App",
-    version: "1.0.0",
-    status: "ready",
-    endpoints: ["createAccount", "getAccount", "updateAccount", "loginAccount"]
-  });
+function jsonResponse(data) {
+  return ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
 }
