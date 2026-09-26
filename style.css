@@ -306,6 +306,71 @@ footer {
   margin: 28px 0;
 }
 
+.account-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 16px 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(21, 18, 30, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  max-width: 100%;
+}
+
+.account-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--purple-2);
+  color: #100b19;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.account-details {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  line-height: 1.25;
+}
+
+.account-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.account-badge {
+  font-size: 0.75rem;
+  color: var(--purple-2);
+}
+
+.account-logout-btn {
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: 8px;
+  transition: 0.18s;
+}
+
+.account-logout-btn:hover {
+  border-color: var(--purple-2);
+  color: var(--text);
+  background: rgba(161, 116, 255, 0.1);
+}
+
 
 /* =========================
    AUTH BUFFER
