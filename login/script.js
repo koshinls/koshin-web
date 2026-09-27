@@ -100,6 +100,8 @@ async function startOAuth(provider, button) {
   try {
     await clearCurrentSession();
 
+    const siteUrl = (import.meta.env.WEBSITE_URL || window.location.origin).replace(/\/+$/, "");
+
     const {
       error
     } = await supabase.auth.signInWithOAuth({
@@ -107,7 +109,7 @@ async function startOAuth(provider, button) {
 
       options: {
         redirectTo:
-          "https://koshinls.localplayer.dev/auth/"
+          `${siteUrl}/auth/`
       }
     });
 

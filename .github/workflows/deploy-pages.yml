@@ -33,8 +33,10 @@ jobs:
 
       - name: Build with Vite
         env:
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          WEBSITE_URL: ${{ vars.WEBSITE_URL }}
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+          KLS_ACCOUNT_API_URL: ${{ secrets.KLS_ACCOUNT_API_URL }}
         run: npm run build
 
       - name: Setup Pages
